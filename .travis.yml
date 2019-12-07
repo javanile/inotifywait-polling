@@ -1,0 +1,33 @@
+language: generic
+
+sudo: required
+
+addons:
+  apt:
+    packages:
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+      - cmake
+
+before_script: |
+  wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
+  tar xzf master.tar.gz &&
+  cd kcov-master &&
+  mkdir build &&
+  cd build &&
+  cmake .. &&
+  make &&
+  sudo make install &&
+  cd ../.. &&
+  rm -rf kcov-master &&
+  mkdir -p coverage
+
+script:
+  - kcov coverage test.sh
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+
+notifications:
+  email: bianco@javanile.org
