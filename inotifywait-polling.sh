@@ -93,7 +93,7 @@ fi
 >&2 echo "Setting up watches."
 
 watch () {
-    echo "watch $1"
+    #echo "watch $1"
     find $1 -printf "%s %y %p\\n" | sort -k3 - > $1.inotifywait
     while true; do
         sleep 2
@@ -109,7 +109,7 @@ watch () {
                 for item in $(tr ';' '\n' <<< "${sign}"); do
                     event=$(echo ${item} | cut -s -d':' -f1)
                     focus=$(echo ${item} | cut -s -d':' -f2)
-                    dir=$(dirname "${focus}")
+                    dir=$(dirname "${focus}")/
                     file=$(basename "${focus}")
                     echo "${dir} ${event} ${file}"
                 done

@@ -1,0 +1,1 @@
+./fixtures/a/ CREATE new-file.txt

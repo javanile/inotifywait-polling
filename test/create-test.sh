@@ -1,11 +1,7 @@
 #!/bin/bash
 set -e
-
-## Prepare temp dir
-temp=$(dirname "$0")/temp
-[[ -d ${temp} ]] && rm -fr ${temp}
-mkdir -p ${temp}
-cd ${temp}
+source $(dirname "$0")/testcase.sh
+cd $(temp)
 
 ##
 options="-e CREATE -m ./fixtures/a"
@@ -26,7 +22,9 @@ rm -fr fixtures && cp -R ../fixtures .
 process
 
 ## Assert
+sleep 5
 echo "=== Assert stderr ==="
 diff err1.txt err2.txt
 echo "=== Assert stdout ==="
 diff out1.txt out2.txt
+success $0

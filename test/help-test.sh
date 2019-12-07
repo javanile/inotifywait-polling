@@ -1,11 +1,7 @@
 #!/bin/bash
 set -e
-
-## Prepare temp dir
-temp=$(dirname "$0")/temp
-[[ -d ${temp} ]] && rm -fr ${temp}
-mkdir -p ${temp}
-cd ${temp}
+source $(dirname "$0")/testcase.sh
+cd $(temp)
 
 ##
 options="--help"

@@ -1,0 +1,3 @@
+4096 d ./fixtures/a
+14 f ./fixtures/a/existing-file.txt
+9 f ./fixtures/a/new-file.txt
