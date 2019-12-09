@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -e -x
 
 export LC_ALL=C
 #trap 'kill -- -$(ps -o pgid= $PID | grep -o [0-9]*)' EXIT
