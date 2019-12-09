@@ -1,8 +1,5 @@
 #!/bin/bash
-#set -e
 
-workdir=$(dirname "$0")
-test=${workdir}/test
 stop=$(cat /proc/sys/kernel/random/uuid)
 export PS4='+:$0:$LINENO: '
 trap '$(jobs -p) || kill $(jobs -p)' EXIT
@@ -18,12 +15,20 @@ lcov_init () {
 
 lcov_scan () {
     lineno=0
+    skip_eof=
     echo "TN:"
     echo "SF:$1"
     while IFS= read line || [[ -n "${line}" ]]; do
         lineno=$((lineno + 1))
         [[ -z "${line}" ]] && continue
         [[ "${line::1}" == "#" ]] && continue
+        [[ "${skip_eof}" == "EOF" ]] && (skip_eof=; continue)
+        [[ "${line}" == *"<<EOF" ]] && (skip_eof=EOF; echo "AA")
+        if [[ "${line}" == *"<<EOF" ]]; then
+            echo "AAAA"
+            exit
+        fi
+
         echo "DA:${lineno},0"
     done < $1
     echo "end_of_record"
@@ -40,8 +45,9 @@ run_test () {
     while IFS= read line || [[ -n "${line}" ]]; do
         if [[ "${line::1}" == "+" ]]; then
             file=$(echo ${line} | cut -s -d':' -f2)
+            echo ${line}
             lineno=$(echo ${line} | cut -s -d':' -f3)
-            echo -e "TN:\nSF:$1\nDA:${lineno},1\nend_of_record" >> coverage/temp.info
+            echo -e "TN:\nSF:${file}\nDA:${lineno},1\nend_of_record" >> coverage/temp.info
         elif [[ "${line}" == "${stop}" ]]; then
             echo "STOP"
             lcov -q -a coverage/temp.info -a coverage/lcov.info -o coverage/lcov.info
@@ -51,6 +57,6 @@ run_test () {
 
 lcov_init
 
-run_test ${test}/help-test.sh
+run_test ./test/help-test.sh
 
 lcov_done

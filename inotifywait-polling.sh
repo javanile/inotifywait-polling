@@ -9,7 +9,7 @@ eval set -- "${options}"
 #echo "options: ${options}"
 
 usage () {
-    cat <<'EOF'
+    cat <<EOF
 inotifywait 3.14
 Wait for a particular event on a file or set of files.
 Usage: inotifywait [ options ] file1 [ file2 ] [ file3 ] [ ... ]
