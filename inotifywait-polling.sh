@@ -2,7 +2,8 @@
 set -e
 
 export LC_ALL=C
-trap 'kill -- -$(ps -o pgid= $PID | grep -o [0-9]*)' EXIT
+#trap 'kill -- -$(ps -o pgid= $PID | grep -o [0-9]*)' EXIT
+trap '$(jobs -p) || kill $(jobs -p)' EXIT
 options=$(getopt -n inotifywait -o hme: -l help -- "$@" && true)
 eval set -- "${options}"
 #echo "options: ${options}"
@@ -77,7 +78,7 @@ EOF
 while true; do
     case "$1" in
         -e) shift; events=$1 ;;
-        -h|--help) usage ;;
+        -h|--help) usage; exit ;;
         --) shift; break ;;
     esac
     shift

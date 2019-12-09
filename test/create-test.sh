@@ -23,6 +23,7 @@ process
 
 ## Assert
 sleep 5
+kill $(jobs -p)
 echo "=== Assert stderr ==="
 diff err1.txt err2.txt
 echo "=== Assert stdout ==="
