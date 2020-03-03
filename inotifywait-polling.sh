@@ -102,27 +102,22 @@ Events:
 EOF
 }
 
-options=$(getopt -n inotifywait -o hme: -l help -- "$@" && true)
+quiet=
+recursive=
+options=$(getopt -n inotifywait -o qrhme: -l help -- "$@" && true)
 eval set -- "${options}"
 #echo "options: ${options}"
 
 while true; do
     case "$1" in
-        -e) shift; events=$1 ;;
+        -q) quiet=1 ;;
+        -r) recursive=1 ;;
+        -e) shift; events=${1^^} ;;
         -h|--help) usage; exit ;;
         --) shift; break ;;
     esac
     shift
 done
-
-if [[ -z "$1" ]]; then
-    >&2 echo "No files specified to watch!"
-    exit 1
-fi
-
-#echo "events: ${events}"
-
->&2 echo "Setting up watches."
 
 ##
 #
@@ -134,13 +129,14 @@ watch () {
         sleep 2
         sign=
         last=$(cat $1.inotifywait)
+        #mv $1.inotifywait $1.$(date +%s).inotifywait
         find $1 -printf "%s %y %p\\n" | sort -k3 - > $1.inotifywait
         meta=$(diff <(echo "${last}") <(cat "$1.inotifywait")) && true
         [[ -z "${meta}" ]] && continue
         echo -e "${meta}\n." | while IFS= read line || [[ -n "${line}" ]]; do
             #echo "line: $line"
             if [[ "${line}" == "." ]]; then
-                #echo "sign: ${sign}"
+                #echo "sign: $sign"
                 for item in $(tr ';' '\n' <<< "${sign}"); do
                     event=$(echo ${item} | cut -s -d':' -f1)
                     focus=$(echo ${item} | cut -s -d':' -f2)
@@ -153,7 +149,7 @@ watch () {
             flag=$(echo ${line} | cut -s -d' ' -f1)
             file=$(echo ${line} | cut -s -d' ' -f4)
             [[ -n "${file}" ]] || continue
-            #echo ${file: -12}
+            #echo "${file} -- ${file: -12}"
             [[ "${file: -12}" != ".inotifywait" ]] || continue
             case ${flag} in
                 "<")
@@ -164,12 +160,16 @@ watch () {
                     if [[ "${sign}" == *"DELETE:${file};"* ]]; then
                         event=MODIFY
                         sign=$(echo "${sign}" | sed "s#DELETE:${file};##g")
+                    elif [[ "${sign}" == *"DELETE:"* ]]; then
+                        event=MOVED_TO
+                        sign=$(echo "${sign}" | sed "s#DELETE:.*;##g")
                     fi
                     ;;
             esac
             sign+="${event}:${file};"
         done
     done
+    return 0
 }
 
 ##
@@ -184,17 +184,32 @@ print_event () {
             [[ -z "${events}" || "${events}" == *"CLOSE"* ]] && echo "$1 CLOSE_WRITE,CLOSE $3"
             ;;
     esac
+    return 0
 }
 
-
-for file in "$@"; do
-    if [[ ! -e "${file}" ]]; then
-        echo "Couldn't watch $1: No such file or directory"
+##
+# Entrypoint
+##
+main () {
+    if [[ -z "$1" ]]; then
+        >&2 echo "No files specified to watch!"
         exit 1
     fi
-    watch ${file} &
-done
 
->&2 echo "Watches established."
-sleep infinity
-exit 0
+    [[ -z "${quiet}" ]] && >&2 echo "Setting up watches."
+
+    for file in "$@"; do
+        if [[ ! -e "${file}" ]]; then
+            echo "Couldn't watch $1: No such file or directory"
+            exit 1
+        fi
+        watch ${file} &
+    done
+
+    [[ -z "${quiet}" ]] && >&2 echo "Watches established."
+    sleep infinity
+    exit 0
+}
+
+##
+main "$@"

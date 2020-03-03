@@ -1,61 +1,16 @@
 #!/bin/bash
+set -e
 
-source lcov.sh
+./test/no-args-test.sh
+./test/no-events-test.sh
 
-stop=$(cat /proc/sys/kernel/random/uuid)
-export PS4='+:$0:$LINENO: '
-trap '$(jobs -p) || kill $(jobs -p)' EXIT
+./test/create-no-filters-test.sh
+./test/create-test.sh
+./test/create-with-close-filter-test.sh
+./test/create-with-touch-file-test.sh
 
-lcov_init () {
-    mkdir -p coverage
-    lcov_scan $0 > coverage/lcov.info
-    find . -type f -name "*.sh" | while read file; do
-        lcov_scan ${file} > coverage/temp.info
-        lcov -q -a coverage/temp.info -a coverage/lcov.info -o coverage/lcov.info
-    done
-}
+./test/modify-test.sh
 
-lcov_scan () {
-    lineno=0
-    skip_eof=
-    echo "TN:"
-    echo "SF:$1"
-    while IFS= read line || [[ -n "${line}" ]]; do
-        line=${line%%*( )}
-        lineno=$((lineno + 1))
-        [[ -z "${line}" ]] && continue
-        [[ "${line::1}" == "#" ]] && continue
-        [[ "${line::1}" == "}" ]] && continue
-        [[ "${line}" == *"{" ]] && continue
-        [[ "${line}" == "EOF" ]] && skip_eof= && continue
-        [[ "${skip_eof}" == "EOF" ]] && continue
-        [[ "${line}" == *"<<EOF" ]] && skip_eof=EOF
-        echo "DA:${lineno},0"
-    done < $1
-    echo "end_of_record"
-}
+./test/moved-to-advanced-test.sh
 
-lcov_done () {
-    genhtml -q -o coverage coverage/lcov.info
-}
-
-run_test () {
-    rm -f coverage/temp.info
-    bash -x $1 2> coverage/test.debug
-    echo "${stop}" >> coverage/test.debug
-    while IFS= read line || [[ -n "${line}" ]]; do
-        if [[ "${line::1}" == "+" ]]; then
-            file=$(echo ${line} | cut -s -d':' -f2)
-            echo ${line}
-            lineno=$(echo ${line} | cut -s -d':' -f3)
-            echo -e "TN:\nSF:${file}\nDA:${lineno},1\nend_of_record" >> coverage/temp.info
-        elif [[ "${line}" == "${stop}" ]]; then
-            echo "STOP"
-            lcov -q -a coverage/temp.info -a coverage/lcov.info -o coverage/lcov.info
-        fi
-    done < coverage/test.debug
-}
-
-lcov_init
-run_test ./test/help-test.sh
-lcov_done
+./test/help-test.sh

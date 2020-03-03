@@ -10,12 +10,13 @@ before_real () {
     rm -fr test/temp
     mkdir -p test/temp
     cp -R test/fixtures test/temp
-    sleep 1
+    sleep 2
 }
 
 after_real () {
     sleep 2
-    killall -w -q inotifywait && true
+    killall -9 -w -q inotifywait && true
+    [[ -z "$(jobs -p)" ]] || kill $(jobs -p) && true
     sleep 1
     return 0
 }
@@ -28,7 +29,7 @@ before_fake () {
 
 after_fake () {
     sleep 2
-    [[ -z "$(jobs -p)" ]] || kill $(jobs -p)
+    [[ -z "$(jobs -p)" ]] || kill $(jobs -p) && true
     sleep 3
     export LCOV_DEBUG=1
 }
