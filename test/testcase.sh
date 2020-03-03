@@ -18,7 +18,7 @@ before_fake () {
 
 after_fake () {
     sleep 5
-    kill $(jobs -p)
+    #kill $(jobs -p)
 }
 
 assert_stdout_stderr () {
