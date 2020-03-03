@@ -35,7 +35,7 @@ export LC_ALL=C
 trap '[[ -z "$(jobs -p)" ]] || kill $(jobs -p)' EXIT
 
 usage () {
-    cat <<EOF
+    cat <<'EOF'
 inotifywait 3.14
 Wait for a particular event on a file or set of files.
 Usage: inotifywait [ options ] file1 [ file2 ] [ file3 ] [ ... ]

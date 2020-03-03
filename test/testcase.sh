@@ -13,7 +13,8 @@ before_real () {
 }
 
 after_real () {
-    killall -w -q inotifywait
+    killall -w -q inotifywait && true
+    return 0
 }
 
 before_fake () {
@@ -23,13 +24,13 @@ before_fake () {
 
 after_fake () {
     sleep 2
-    kill $(jobs -p)
+    [[ -z "$(jobs -p)" ]] || kill $(jobs -p)
     sleep 3
 }
 
 assert_stdout_stderr () {
     echo "---> stdout test"
-    diff test/temp/stdout_real.txt test/temp/stdout_fake.txt && echo "Done."
+    diff $1 test/temp/stdout_real.txt test/temp/stdout_fake.txt && echo "Done."
     echo "---> stderr test"
     diff test/temp/stderr_real.txt test/temp/stderr_fake.txt && echo "Done."
 }

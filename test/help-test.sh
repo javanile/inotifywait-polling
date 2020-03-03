@@ -13,6 +13,6 @@ before_fake
 ./inotifywait-polling.sh ${options[0]} > ${STDOUT_FAKE} 2> ${STDERR_FAKE} && true
 after_fake
 
-assert_stdout_stderr
+assert_stdout_stderr -b
 
 success $0
