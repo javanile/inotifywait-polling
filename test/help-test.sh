@@ -1,12 +1,18 @@
 #!/bin/bash
 set -e
 
-source testcase.sh
+source test/testcase.sh
 
 options="--help"
 
-inotifywait ${options[0]} > out1.txt && true
-./inotifywait-polling.sh ${options[0]} > out2.txt && true
+before_real
+inotifywait ${options[0]} > ${STDOUT_REAL} 2> ${STDERR_REAL} && true
+after_real
 
-diff err1.txt err2.txt
-diff -b out1.txt out2.txt
+before_fake
+./inotifywait-polling.sh ${options[0]} > ${STDOUT_FAKE} 2> ${STDERR_FAKE} && true
+after_fake
+
+assert_stdout_stderr
+
+success $0

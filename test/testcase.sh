@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+STDERR_REAL=test/temp/stderr_real.txt
+STDERR_FAKE=test/temp/stderr_fake.txt
+STDOUT_REAL=test/temp/stdout_real.txt
+STDOUT_FAKE=test/temp/stdout_fake.txt
+
 before_real () {
     rm -fr test/temp
     mkdir -p test/temp
