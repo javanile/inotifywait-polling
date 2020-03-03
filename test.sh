@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source lcov.sh
+
 stop=$(cat /proc/sys/kernel/random/uuid)
 export PS4='+:$0:$LINENO: '
 trap '$(jobs -p) || kill $(jobs -p)' EXIT
@@ -19,16 +21,15 @@ lcov_scan () {
     echo "TN:"
     echo "SF:$1"
     while IFS= read line || [[ -n "${line}" ]]; do
+        line=${line%%*( )}
         lineno=$((lineno + 1))
         [[ -z "${line}" ]] && continue
         [[ "${line::1}" == "#" ]] && continue
-        [[ "${skip_eof}" == "EOF" ]] && (skip_eof=; continue)
-        [[ "${line}" == *"<<EOF" ]] && (skip_eof=EOF; echo "AA")
-        if [[ "${line}" == *"<<EOF" ]]; then
-            echo "AAAA"
-            exit
-        fi
-
+        [[ "${line::1}" == "}" ]] && continue
+        [[ "${line}" == *"{" ]] && continue
+        [[ "${line}" == "EOF" ]] && skip_eof= && continue
+        [[ "${skip_eof}" == "EOF" ]] && continue
+        [[ "${line}" == *"<<EOF" ]] && skip_eof=EOF
         echo "DA:${lineno},0"
     done < $1
     echo "end_of_record"
@@ -56,7 +57,5 @@ run_test () {
 }
 
 lcov_init
-
 run_test ./test/help-test.sh
-
 lcov_done

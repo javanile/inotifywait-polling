@@ -1,31 +1,24 @@
 #!/bin/bash
 set -e
-source $(dirname "$0")/testcase.sh
-cd $(temp)
 
-##
-options="-e CREATE -m ./fixtures/a"
-process () {
-    sleep 1 && echo "new-file" > ./fixtures/a/new-file.txt
+source test/testcase.sh
+
+options="-e CREATE -m test/temp/fixtures/a"
+trigger_test_events () {
+    echo "new-file" > test/temp/fixtures/a/new-file.txt
     return 0
 }
 
-## Run inotifywait
-rm -fr fixtures && cp -R ../fixtures .
-(inotifywait ${options[0]} > out1.txt 2> err1.txt)&
-process
+before_real
+(inotifywait ${options[0]} > test/temp/stdout_real.txt 2> test/temp/stderr_real.txt)&
+sleep 1 && trigger_test_events
+after_real
 
-## Run inotifywait
-killall -w -q inotifywait
-rm -fr fixtures && cp -R ../fixtures .
-(../../inotifywait-polling.sh ${options[0]} > out2.txt 2> err2.txt)&
-process
+before_fake
+(./inotifywait-polling.sh ${options[0]} > test/temp/stdout_fake.txt 2> test/temp/stderr_fake.txt)&
+sleep 1 && trigger_test_events
+after_fake
 
-## Assert
-sleep 5
-kill $(jobs -p)
-echo "=== Assert stderr ==="
-diff err1.txt err2.txt
-echo "=== Assert stdout ==="
-diff out1.txt out2.txt
+assert_stdout_stderr
+
 success $0

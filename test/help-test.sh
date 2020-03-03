@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-source $(dirname "$0")/testcase.sh
+source testcase.sh
 
 options="--help"
 

@@ -2,3 +2,4 @@
 .vscode/
 test/temp/
 coverage/
+lcov.sh
