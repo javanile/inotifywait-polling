@@ -32,7 +32,8 @@ set -e
 
 export LC_ALL=C
 
-trap '[[ -z "$(jobs -p)" ]] || kill $(jobs -p)' EXIT
+#trap '[[ -z "$(jobs -p)" ]] || kill $(jobs -p)' EXIT
+trap 'kill $(jobs -p) > /dev/null 2>&1' EXIT
 
 usage () {
     cat <<'EOF'
@@ -115,7 +116,7 @@ while true; do
 done
 
 if [[ -z "$1" ]]; then
-    echo "No files specified to watch!"
+    >&2 echo "No files specified to watch!"
     exit 1
 fi
 
@@ -123,6 +124,9 @@ fi
 
 >&2 echo "Setting up watches."
 
+##
+#
+##
 watch () {
     #echo "watch $1"
     find $1 -printf "%s %y %p\\n" | sort -k3 - > $1.inotifywait
@@ -142,7 +146,7 @@ watch () {
                     focus=$(echo ${item} | cut -s -d':' -f2)
                     dir=$(dirname "${focus}")/
                     file=$(basename "${focus}")
-                    echo "${dir} ${event} ${file}"
+                    print_event ${dir} ${event} ${file}
                 done
                 break
             fi
@@ -167,6 +171,21 @@ watch () {
         done
     done
 }
+
+##
+#
+##
+print_event () {
+    [[ -z "${events}" || "${events}" == *"$2"* ]] && echo "$1 $2 $3"
+    case "$2" in
+        CREATE)
+            [[ -z "${events}" || "${events}" == *"OPEN"* ]] && echo "$1 OPEN $3"
+            [[ -z "${events}" || "${events}" == *"MODIFY"* ]] && echo "$1 MODIFY $3"
+            [[ -z "${events}" || "${events}" == *"CLOSE"* ]] && echo "$1 CLOSE_WRITE,CLOSE $3"
+            ;;
+    esac
+}
+
 
 for file in "$@"; do
     if [[ ! -e "${file}" ]]; then

@@ -3,10 +3,12 @@ set -e
 
 source test/testcase.sh
 
-options="-e CREATE -m test/temp/fixtures/a"
+options="-m test/temp/fixtures/a"
 trigger_test_events () {
     sleep 1
-    echo "new-file" > test/temp/fixtures/a/new-file.txt
+    touch test/temp/fixtures/a/file-touch.txt
+    sleep 1
+    touch test/temp/fixtures/a/b/file-touch.txt
     sleep 1
     return 0
 }

@@ -3,7 +3,7 @@ set -e
 
 source test/testcase.sh
 
-options="-e CREATE -m test/temp/fixtures/a"
+options="-q -r -e moved_to,create -m test/temp/fixtures/c"
 trigger_test_events () {
     sleep 1
     echo "new-file" > test/temp/fixtures/a/new-file.txt
