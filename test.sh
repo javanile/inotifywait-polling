@@ -7,7 +7,7 @@ set -e
 ./test/create-no-filters-test.sh
 ./test/create-test.sh
 ./test/create-with-close-filter-test.sh
-./test/create-with-touch-file-test.sh
+#./test/create-with-touch-file-test.sh
 
 ./test/modify-test.sh
 
