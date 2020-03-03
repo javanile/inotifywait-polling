@@ -17,17 +17,18 @@ before_fake () {
 }
 
 after_fake () {
-    sleep 5
-    #kill $(jobs -p)
+    sleep 2
+    kill $(jobs -p)
+    sleep 3
 }
 
 assert_stdout_stderr () {
-    echo "=== Assert stdout ==="
-    diff test/temp/stdout_real.txt test/temp/stdout_fake.txt
-    echo "=== Assert stderr ==="
-    diff test/temp/stderr_real.txt test/temp/stderr_fake.txt
+    echo "---> stdout test"
+    diff test/temp/stdout_real.txt test/temp/stdout_fake.txt && echo "Done."
+    echo "---> stderr test"
+    diff test/temp/stderr_real.txt test/temp/stderr_fake.txt && echo "Done."
 }
 
 success () {
-    echo "Test '$1' successful."
+    echo "Test '$1' ok!"
 }

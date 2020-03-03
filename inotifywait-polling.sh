@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 ##
-# LCOV.SH
+# inotifywait-polling
 #
-# The best LCOV framework around BASH projects.
+# inotifywait in full BASH.
 #
 # Copyright (c) 2020 Francesco Bianco <bianco@javanile.org>
 #
@@ -32,12 +32,7 @@ set -e
 
 export LC_ALL=C
 
-#trap 'kill -- -$(ps -o pgid= $PID | grep -o [0-9]*)' EXIT
-trap '$(jobs -p) || kill $(jobs -p)' EXIT
-
-options=$(getopt -n inotifywait -o hme: -l help -- "$@" && true)
-eval set -- "${options}"
-#echo "options: ${options}"
+trap '[[ -z "$(jobs -p)" ]] || kill $(jobs -p)' EXIT
 
 usage () {
     cat <<EOF
@@ -105,6 +100,10 @@ Events:
 	unmount		file system containing file or directory unmounted
 EOF
 }
+
+options=$(getopt -n inotifywait -o hme: -l help -- "$@" && true)
+eval set -- "${options}"
+#echo "options: ${options}"
 
 while true; do
     case "$1" in

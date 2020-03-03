@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+#trap 'jobs -p && kill $(jobs -p)' EXIT
+
 source test/testcase.sh
 
 options="-e CREATE -m test/temp/fixtures/a"
