@@ -2,14 +2,14 @@
 set -e
 
 ##
-## inotifywait-polling v0.0.1
-## --------------------------
-## by Francesco Bianco
-## info@javanile.org
-## MIT License
+# inotifywait-polling v0.0.1
+# --------------------------
+# by Francesco Bianco
+# info@javanile.org
+# MIT License
 ##
 
-FILE_BIN=/usr/local/bin/inotifywait-polling
+FILE_BIN=${bin:-/usr/local/bin/inotifywait-polling}
 FILE_SRC=https://javanile.github.io/inotifywait-polling/inotifywait-polling.sh
 
 echo "Get: ${FILE_SRC} -> ${FILE_BIN}"
