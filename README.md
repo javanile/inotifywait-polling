@@ -25,7 +25,7 @@ chmod +x /usr/local/bin/inotifywait-polling
 It works exactly like the original, so it accepts the same options, with the only difference that it checks every 5 seconds that your target has changed or not (unfortunately this is the only way around the problem in those file systems where the original does not work).
 
 ```shell
-$ inotifywait $HOME
+$ inotifywait-polling $HOME
 Setting up watches.
 Watches established.
 ```
