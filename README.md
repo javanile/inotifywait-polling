@@ -6,7 +6,7 @@
 Today **inotify** has limitaion on watch for chagnes into particular filesystems or mount points. Here is a short list
 
 - Mountend volumes from Docker containers in a Microsoft Windows host.
-- Mountend directories with file system SMB/NFS from Linux host.
+- Mountend directories with file system SMB/NFS from GNU/Linux host.
 
 In all of this case you can use **inotifywait-polling** instead of classic **inotifywait** to watch for changes into this use cases.
 
