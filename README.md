@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/javanile/inotifywait-polling.svg?branch=master)](https://travis-ci.org/javanile/inotifywait-polling)
 [![codecov](https://codecov.io/gh/javanile/inotifywait-polling/branch/master/graph/badge.svg)](https://codecov.io/gh/javanile/inotifywait-polling)
 
-Today **inotify** has limitaions on watch for chagnes into particular filesystems or mount points. Here is a short list
+Today **inotify** has limitaions on watch for chagnes into particular filesystem or mount point. Here is a short list
 
 - Mountend volumes from Docker containers in a Microsoft Windows host.
 - Mountend directories with file system SMB/NFS from GNU/Linux host.
