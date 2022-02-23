@@ -104,14 +104,22 @@ EOF
 
 quiet=
 recursive=
-options=$(getopt -n inotifywait -o qrhme: -l help -- "$@" && true)
+monitor=
+timeout=
+excludes=()
+find_recursion=
+
+options=$(getopt -n inotifywait -o qrhme:t: -l help -l exclude: -l timeout: -- "$@" && true)
 eval set -- "${options}"
 #echo "options: ${options}"
 
 while true; do
     case "$1" in
+        --exclude) shift; excludes+=("${1}") ;;
         -q) quiet=1 ;;
         -r) recursive=1 ;;
+        -m) monitor=1 ;;
+        -t|--timeout) shift; timeout="${1}" ;;
         -e) shift; events=${1^^} ;;
         -h|--help) usage; exit ;;
         --) shift; break ;;
@@ -119,21 +127,50 @@ while true; do
     shift
 done
 
+
 ##
 #
 ##
 watch () {
     #echo "watch $1"
-    find $1 -printf "%s %y %p\\n" | sort -k3 - > $1.inotifywait
-    while true; do
+
+    # Setup watch filename
+    if [ -w "$1" ]; then
+        inofile="$1/$$.inotifywait"
+    elif [ -w "/tmp" ]; then
+        inofile="/tmp/$$.inotifywait"
+    elif [ -w "./" ]; then
+        inofile="./$$.inotifywait"
+    else
+        echo "Cannot find writable directory for inotifywait comparaison file."
+        exit 1
+    fi
+
+    # Reload trap so we remove inotifyfile when script ends
+    trap 'rm -f "$inofile"; kill $(jobs -p) > /dev/null 2>&1' EXIT
+
+    # Setup exclusions for find
+    for exclude in "${excludes[@]}"; do
+        find_excludes="$find_excludes ! -regex \"$exclude\""
+    done
+
+    # Setup recursion
+    [[ -z "${recursive}" ]] && find_recursion=" -maxdepth 1"
+
+    cmd="find \"$1\" $find_excludes $find_recursion -printf \"%s %y %p\\n\" | sort -k3 - > \"$inofile\""
+    echo "$cmd"
+    eval "$cmd"
+    needs_to_end=0
+    while [[ $needs_to_end != 1 ]]; do
         sleep 2
         sign=
-        last=$(cat $1.inotifywait)
-        #mv $1.inotifywait $1.$(date +%s).inotifywait
-        find $1 -printf "%s %y %p\\n" | sort -k3 - > $1.inotifywait
-        meta=$(diff <(echo "${last}") <(cat "$1.inotifywait")) && true
+        last=$(cat "$inofile")
+        #mv "$inofile" $1.$(date +%s).inotifywait
+        eval "$cmd"
+        meta=$(diff <(echo "${last}") <(cat "$inofile")) && true
         [[ -z "${meta}" ]] && continue
-        echo -e "${meta}\n." | while IFS= read line || [[ -n "${line}" ]]; do
+
+        while IFS= read line || [[ -n "${line}" ]]; do
             #echo "line: $line"
             if [[ "${line}" == "." ]]; then
                 #echo "sign: $sign"
@@ -150,7 +187,7 @@ watch () {
             file=$(echo ${line} | cut -s -d' ' -f4)
             [[ -n "${file}" ]] || continue
             #echo "${file} -- ${file: -12}"
-            [[ "${file: -12}" != ".inotifywait" ]] || continue
+            [[ "${file}" != "$inofile" ]] || continue
             case ${flag} in
                 "<")
                     event=DELETE
@@ -167,9 +204,12 @@ watch () {
                     ;;
             esac
             sign+="${event}:${file};"
-        done
+            if [[ "$monitor" != "1" ]]; then
+                needs_to_end=1
+            fi
+        done <<< "$(echo -e "${meta}\n.")"
     done
-    return 0
+    exit 0
 }
 
 ##
@@ -191,7 +231,9 @@ print_event () {
 # Entrypoint
 ##
 main () {
+    pids=()
     if [[ -z "$1" ]]; then
+
         >&2 echo "No files specified to watch!"
         exit 1
     fi
@@ -203,12 +245,28 @@ main () {
             echo "Couldn't watch $1: No such file or directory"
             exit 1
         fi
-        watch ${file} &
+        watch "${file}" &
+        pids+=($!)
     done
 
     [[ -z "${quiet}" ]] && >&2 echo "Watches established."
-    sleep infinity
-    exit 0
+    while true; do
+        alive=0
+        for pid in "${pids[@]}"; do
+            if kill -0 "$pid" > /dev/null 2>&1; then
+                 alive=1
+            fi
+        done
+        [[ "${alive}" == "0" ]] && exit 0
+        sleep 2
+
+        if [[ $timeout -ne 0 ]] && [[ $SECONDS -gt $timeout ]]; then
+                for pid in "${pids[@]}"; do
+                        kill -9 "$pid" > /dev/null 2>&1
+                done
+                exit 1
+        fi
+    done
 }
 
 ##
