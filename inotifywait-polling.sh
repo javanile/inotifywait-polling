@@ -105,10 +105,11 @@ EOF
 quiet=
 recursive=
 monitor=
+timeout=
 excludes=()
 find_recursion=
 
-options=$(getopt -n inotifywait -o qrhme: -l help -l exclude: -- "$@" && true)
+options=$(getopt -n inotifywait -o qrhme:t: -l help -l exclude: -l timeout: -- "$@" && true)
 eval set -- "${options}"
 #echo "options: ${options}"
 
@@ -118,6 +119,7 @@ while true; do
         -q) quiet=1 ;;
         -r) recursive=1 ;;
         -m) monitor=1 ;;
+        -t|--timeout) shift; timeout="${1}" ;;
         -e) shift; events=${1^^} ;;
         -h|--help) usage; exit ;;
         --) shift; break ;;
@@ -231,6 +233,7 @@ print_event () {
 main () {
     pids=()
     if [[ -z "$1" ]]; then
+
         >&2 echo "No files specified to watch!"
         exit 1
     fi
@@ -256,6 +259,13 @@ main () {
         done
         [[ "${alive}" == "0" ]] && exit 0
         sleep 2
+
+        if [[ $timeout -ne 0 ]] && [[ $SECONDS -gt $timeout ]]; then
+                for pid in "${pids[@]}"; do
+                        kill -9 "$pid" > /dev/null 2>&1
+                done
+                exit 1
+        fi
     done
 }
 
