@@ -158,7 +158,7 @@ watch () {
     [[ -z "${recursive}" ]] && find_recursion=" -maxdepth 1"
 
     cmd="find \"$1\" $find_excludes $find_recursion -printf \"%s %y %p\\n\" | sort -k3 - > \"$inofile\""
-    echo "$cmd"
+    #echo "$cmd"
     eval "$cmd"
     needs_to_end=0
     while [[ $needs_to_end != 1 ]]; do
@@ -174,17 +174,17 @@ watch () {
             #echo "line: $line"
             if [[ "${line}" == "." ]]; then
                 #echo "sign: $sign"
-                for item in $(tr ';' '\n' <<< "${sign}"); do
-                    event=$(echo ${item} | cut -s -d':' -f1)
-                    focus=$(echo ${item} | cut -s -d':' -f2)
-                    dir=$(dirname "${focus}")/
-                    file=$(basename "${focus}")
-                    print_event ${dir} ${event} ${file}
-                done
+                while IFS=';' read -r item; do
+                    event="$(echo "${item}" | cut -s -d':' -f1)"
+                    focus="$(echo "${item}" | cut -s -d':' -f2)"
+                    dir="$(dirname "${focus}")/"
+                    file="$(basename "${focus}" | cut -d';' -f1)"
+                    print_event "${dir}" "${event}" "${file}"
+                done <<< "${sign}"
                 break
             fi
-            flag=$(echo ${line} | cut -s -d' ' -f1)
-            file=$(echo ${line} | cut -s -d' ' -f4)
+            flag="$(echo ${line} | cut -s -d' ' -f1)"
+            file="$(echo ${line} | cut -s -d' ' -f4-)"
             [[ -n "${file}" ]] || continue
             #echo "${file} -- ${file: -12}"
             [[ "${file}" != "$inofile" ]] || continue
@@ -196,10 +196,10 @@ watch () {
                     event=CREATE
                     if [[ "${sign}" == *"DELETE:${file};"* ]]; then
                         event=MODIFY
-                        sign=$(echo "${sign}" | sed "s#DELETE:${file};##g")
+                        sign="$(echo "${sign}" | sed "s#DELETE:${file};##g")"
                     elif [[ "${sign}" == *"DELETE:"* ]]; then
                         event=MOVED_TO
-                        sign=$(echo "${sign}" | sed "s#DELETE:.*;##g")
+                        sign="$(echo "${sign}" | sed "s#DELETE:.*;##g")"
                     fi
                     ;;
             esac
@@ -211,6 +211,7 @@ watch () {
     done
     exit 0
 }
+
 
 ##
 #
