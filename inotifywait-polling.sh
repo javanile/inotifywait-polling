@@ -158,7 +158,7 @@ watch () {
     [[ -z "${recursive}" ]] && find_recursion=" -maxdepth 1"
 
     cmd="find \"$1\" $find_excludes $find_recursion -printf \"%s %y %p\\n\" | sort -k3 - > \"$inofile\""
-    echo "$cmd"
+    #echo "$cmd"
     eval "$cmd"
     needs_to_end=0
     while [[ $needs_to_end != 1 ]]; do
@@ -176,9 +176,9 @@ watch () {
                 #echo "sign: $sign"
                 while IFS=';' read -r item; do
                     event="$(echo "${item}" | cut -s -d':' -f1)"
-                    focus="$(echo "${item}" | cut -s -d':' -f2 | cut -s -d';' -f1)"
+                    focus="$(echo "${item}" | cut -s -d':' -f2)"
                     dir="$(dirname "${focus}")/"
-                    file="$(basename "${focus}")"
+                    file="$(basename "${focus}" | cut -d';' -f1)"
                     print_event "${dir}" "${event}" "${file}"
                 done <<< "${sign}"
                 break
@@ -211,6 +211,7 @@ watch () {
     done
     exit 0
 }
+
 
 ##
 #
