@@ -174,17 +174,17 @@ watch () {
             #echo "line: $line"
             if [[ "${line}" == "." ]]; then
                 #echo "sign: $sign"
-                for item in $(tr ';' '\n' <<< "${sign}"); do
-                    event=$(echo ${item} | cut -s -d':' -f1)
-                    focus=$(echo ${item} | cut -s -d':' -f2)
-                    dir=$(dirname "${focus}")/
-                    file=$(basename "${focus}")
-                    print_event ${dir} ${event} ${file}
-                done
+                while IFS=';' read -r item; do
+                    event="$(echo "${item}" | cut -s -d':' -f1)"
+                    focus="$(echo "${item}" | cut -s -d':' -f2 | cut -s -d';' -f1)"
+                    dir="$(dirname "${focus}")/"
+                    file="$(basename "${focus}")"
+                    print_event "${dir}" "${event}" "${file}"
+                done <<< "${sign}"
                 break
             fi
-            flag=$(echo ${line} | cut -s -d' ' -f1)
-            file=$(echo ${line} | cut -s -d' ' -f4)
+            flag="$(echo ${line} | cut -s -d' ' -f1)"
+            file="$(echo ${line} | cut -s -d' ' -f4-)"
             [[ -n "${file}" ]] || continue
             #echo "${file} -- ${file: -12}"
             [[ "${file}" != "$inofile" ]] || continue
@@ -196,10 +196,10 @@ watch () {
                     event=CREATE
                     if [[ "${sign}" == *"DELETE:${file};"* ]]; then
                         event=MODIFY
-                        sign=$(echo "${sign}" | sed "s#DELETE:${file};##g")
+                        sign="$(echo "${sign}" | sed "s#DELETE:${file};##g")"
                     elif [[ "${sign}" == *"DELETE:"* ]]; then
                         event=MOVED_TO
-                        sign=$(echo "${sign}" | sed "s#DELETE:.*;##g")
+                        sign="$(echo "${sign}" | sed "s#DELETE:.*;##g")"
                     fi
                     ;;
             esac
