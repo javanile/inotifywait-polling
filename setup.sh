@@ -10,7 +10,7 @@ set -e
 ##
 
 FILE_BIN=${bin:-/usr/local/bin/inotifywait-polling}
-FILE_SRC=https://javanile.github.io/inotifywait-polling/inotifywait-polling.sh
+FILE_SRC=https://raw.githubusercontent.com/javanile/inotifywait-polling/main/inotifywait-polling.sh
 
 echo "Get: ${FILE_SRC} -> ${FILE_BIN}"
 curl --progress-bar -sLo ${FILE_BIN} ${FILE_SRC}
