@@ -124,13 +124,13 @@ done
 ##
 watch () {
     #echo "watch $1"
-    find $1 -printf "%s %y %p\\n" | sort -k3 - > $1.inotifywait
+    find $1 -printf "%s %y %p %T@\\n" | sort -k3 - > $1.inotifywait
     while true; do
         sleep 2
         sign=
         last=$(cat $1.inotifywait)
         #mv $1.inotifywait $1.$(date +%s).inotifywait
-        find $1 -printf "%s %y %p\\n" | sort -k3 - > $1.inotifywait
+        find $1 -printf "%s %y %p %T@\\n" | sort -k3 - > $1.inotifywait
         meta=$(diff <(echo "${last}") <(cat "$1.inotifywait")) && true
         [[ -z "${meta}" ]] && continue
         echo -e "${meta}\n." | while IFS= read line || [[ -n "${line}" ]]; do
