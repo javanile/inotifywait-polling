@@ -43,7 +43,7 @@ Watches established.
 ### Dockerfile
 
 ```bash
-RUN curl -s https://javanile.github.io/inotifywait-polling/setup.sh | bin=inotifywait bash -
+RUN curl -s https://raw.githubusercontent.com/javanile/inotifywait-polling/main/setup.sh | bin=inotifywait bash -
 ```
 
 ## Changelog
