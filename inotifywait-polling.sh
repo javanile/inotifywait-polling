@@ -41,36 +41,37 @@ inotifywait 3.14
 Wait for a particular event on a file or set of files.
 Usage: inotifywait [ options ] file1 [ file2 ] [ file3 ] [ ... ]
 Options:
-	-h|--help     	Show this help text.
-	@<file>       	Exclude the specified file from being watched.
+	-h|--help     	    Show this help text.
+	@<file>       	    Exclude the specified file from being watched.
 	--exclude <pattern>
-	              	Exclude all events on files matching the
-	              	extended regular expression <pattern>.
+	              	    Exclude all events on files matching the
+	              	    extended regular expression <pattern>.
 	--excludei <pattern>
-	              	Like --exclude but case insensitive.
-	-m|--monitor  	Keep listening for events forever.  Without
-	              	this option, inotifywait will exit after one
-	              	event is received.
-	-d|--daemon   	Same as --monitor, except run in the background
-	              	logging events to a file specified by --outfile.
-	              	Implies --syslog.
-	-r|--recursive	Watch directories recursively.
+	              	    Like --exclude but case insensitive.
+    -w|--watchtower     Set the file path where monitoring information is stored.
+	-m|--monitor  	    Keep listening for events forever.  Without
+	              	    this option, inotifywait will exit after one
+	              	    event is received.
+	-d|--daemon   	    Same as --monitor, except run in the background
+	              	    logging events to a file specified by --outfile.
+	              	    Implies --syslog.
+	-r|--recursive	    Watch directories recursively.
 	--fromfile <file>
-	              	Read files to watch from <file> or `-' for stdin.
+	              	    Read files to watch from <file> or `-' for stdin.
 	-o|--outfile <file>
-	              	Print events to <file> rather than stdout.
-	-s|--syslog   	Send errors to syslog rather than stderr.
-	-q|--quiet    	Print less (only print events).
-	-qq           	Print nothing (not even events).
-	--format <fmt>	Print using a specified printf-like format
-	              	string; read the man page for more details.
-	--timefmt <fmt>	strftime-compatible format string for use with
-	              	%T in --format string.
-	-c|--csv      	Print events in CSV format.
+	              	    Print events to <file> rather than stdout.
+	-s|--syslog   	    Send errors to syslog rather than stderr.
+	-q|--quiet    	    Print less (only print events).
+	-qq           	    Print nothing (not even events).
+	--format <fmt>	    Print using a specified printf-like format
+	              	    string; read the man page for more details.
+	--timefmt <fmt>	    strftime-compatible format string for use with
+	              	    %T in --format string.
+	-c|--csv      	    Print events in CSV format.
 	-t|--timeout <seconds>
-	              	When listening for a single event, time out after
-	              	waiting for an event for <seconds> seconds.
-	              	If <seconds> is 0, inotifywait will never time out.
+	              	    When listening for a single event, time out after
+	              	    waiting for an event for <seconds> seconds.
+	              	    If <seconds> is 0, inotifywait will never time out.
 	-e|--event <event1> [ -e|--event <event2> ... ]
 		Listen for specific event(s).  If omitted, all events are
 		listened for.
@@ -104,6 +105,7 @@ EOF
 
 quiet=
 recursive=
+watchtower=
 options=$(getopt -n inotifywait -o qrhme: -l help -- "$@" && true)
 eval set -- "${options}"
 #echo "options: ${options}"
@@ -112,6 +114,7 @@ while true; do
     case "$1" in
         -q) quiet=1 ;;
         -r) recursive=1 ;;
+        -w) watchtower=1 ;;
         -e) shift; events=${1^^} ;;
         -h|--help) usage; exit ;;
         --) shift; break ;;
@@ -123,15 +126,16 @@ done
 #
 ##
 watch () {
-    #echo "watch $1"
-    find $1 -printf "%s %y %p\\n" | sort -k3 - > $1.inotifywait
+    if [[ -z ${watchtower} ]] && watchtower=$1
+    #echo "watch $watchtower"
+    find $watchtower -printf "%s %y %p\\n" | sort -k3 - > $watchtower.inotifywait
     while true; do
         sleep 2
         sign=
-        last=$(cat $1.inotifywait)
-        #mv $1.inotifywait $1.$(date +%s).inotifywait
-        find $1 -printf "%s %y %p\\n" | sort -k3 - > $1.inotifywait
-        meta=$(diff <(echo "${last}") <(cat "$1.inotifywait")) && true
+        last=$(cat $watchtower.inotifywait)
+        #mv $watchtower.inotifywait $watchtower.$(date +%s).inotifywait
+        find $watchtower -printf "%s %y %p\\n" | sort -k3 - > $watchtower.inotifywait
+        meta=$(diff <(echo "${last}") <(cat "$watchtower.inotifywait")) && true
         [[ -z "${meta}" ]] && continue
         echo -e "${meta}\n." | while IFS= read line || [[ -n "${line}" ]]; do
             #echo "line: $line"
