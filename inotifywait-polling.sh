@@ -127,7 +127,11 @@ done
 ##
 watch () {
     target=$1
-    [[ -z ${watchtower} ]] && watchtower=$target
+    [[ -z ${watchtower} ]] && watchtower="$HOME"
+    [[ $watchtower != */ ]] && watchtower="$watchtower/"
+    watchtower=$watchtower.$(echo $target | sed -e 's|\.||g' -e 's|^./||g; s|^/||g' -e 's|/$||g' | sed -e 's|/|-|g').inotifywait
+
+    find $target -printf "%s %y %p\\n" | sort -k3 - > $watchtower.inotifywait
     #echo "watch $target"
     find $target -printf "%s %y %p\\n" | sort -k3 - > $watchtower.inotifywait
     while true; do
