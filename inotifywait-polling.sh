@@ -106,7 +106,7 @@ EOF
 quiet=
 recursive=
 watchtower=
-options=$(getopt -n inotifywait -o qrhme: -l help -- "$@" && true)
+options=$(getopt -n inotifywait -o qrhmw:e: -l help -- "$@" && true)
 eval set -- "${options}"
 #echo "options: ${options}"
 
