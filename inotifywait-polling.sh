@@ -132,14 +132,14 @@ watch () {
     watchtower=$watchtower.$(echo $target | sed -e 's|\.||g' -e 's|^./||g; s|^/||g' -e 's|/$||g' | sed -e 's|/|-|g').inotifywait
 
     #echo "watch $target"
-    find $target -printf "%s %y %p\\n" | sort -k3 - > $watchtower.inotifywait
+    find $target -printf "%s %y %p\\n" | sort -k3 - > $watchtower
     while true; do
         sleep 2
         sign=
-        last=$(cat $watchtower.inotifywait)
-        #mv $watchtower.inotifywait $watchtower.$(date +%s).inotifywait
-        find $target -printf "%s %y %p\\n" | sort -k3 - > $watchtower.inotifywait
-        meta=$(diff <(echo "${last}") <(cat "$watchtower.inotifywait")) && true
+        last=$(cat $watchtower)
+        #mv $watchtower $watchtower.$(date +%s)
+        find $target -printf "%s %y %p\\n" | sort -k3 - > $watchtower
+        meta=$(diff <(echo "${last}") <(cat "$watchtower")) && true
         [[ -z "${meta}" ]] && continue
         echo -e "${meta}\n." | while IFS= read line || [[ -n "${line}" ]]; do
             #echo "line: $line"
