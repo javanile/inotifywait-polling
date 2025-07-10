@@ -41,37 +41,37 @@ inotifywait 3.14
 Wait for a particular event on a file or set of files.
 Usage: inotifywait [ options ] file1 [ file2 ] [ file3 ] [ ... ]
 Options:
-	-h|--help     	    Show this help text.
-	@<file>       	    Exclude the specified file from being watched.
+	-h|--help	 	Show this help text.
+	@<file>	   		Exclude the specified file from being watched.
 	--exclude <pattern>
-	              	    Exclude all events on files matching the
-	              	    extended regular expression <pattern>.
+				  	Exclude all events on files matching the
+				  	extended regular expression <pattern>.
 	--excludei <pattern>
-	              	    Like --exclude but case insensitive.
-    -w|--watchtower     Set the file path where monitoring information is stored.
-	-m|--monitor  	    Keep listening for events forever.  Without
-	              	    this option, inotifywait will exit after one
-	              	    event is received.
-	-d|--daemon   	    Same as --monitor, except run in the background
-	              	    logging events to a file specified by --outfile.
-	              	    Implies --syslog.
-	-r|--recursive	    Watch directories recursively.
+				  	Like --exclude but case insensitive.
+	-w|--watchtower	Set the file path where monitoring information is stored.
+	-m|--monitor  	Keep listening for events forever.  Without
+				  	this option, inotifywait will exit after one
+				  	event is received.
+	-d|--daemon   	Same as --monitor, except run in the background
+				  	logging events to a file specified by --outfile.
+				  	Implies --syslog.
+	-r|--recursive	Watch directories recursively.
 	--fromfile <file>
-	              	    Read files to watch from <file> or `-' for stdin.
+				  	Read files to watch from <file> or `-' for stdin.
 	-o|--outfile <file>
-	              	    Print events to <file> rather than stdout.
-	-s|--syslog   	    Send errors to syslog rather than stderr.
-	-q|--quiet    	    Print less (only print events).
-	-qq           	    Print nothing (not even events).
-	--format <fmt>	    Print using a specified printf-like format
-	              	    string; read the man page for more details.
-	--timefmt <fmt>	    strftime-compatible format string for use with
-	              	    %T in --format string.
-	-c|--csv      	    Print events in CSV format.
+				  	Print events to <file> rather than stdout.
+	-s|--syslog   	Send errors to syslog rather than stderr.
+	-q|--quiet		Print less (only print events).
+	-qq		   		Print nothing (not even events).
+	--format <fmt>	Print using a specified printf-like format
+				  	string; read the man page for more details.
+	--timefmt <fmt>	strftime-compatible format string for use with
+				  	%T in --format string.
+	-c|--csv	  	Print events in CSV format.
 	-t|--timeout <seconds>
-	              	    When listening for a single event, time out after
-	              	    waiting for an event for <seconds> seconds.
-	              	    If <seconds> is 0, inotifywait will never time out.
+					When listening for a single event, time out after
+					waiting for an event for <seconds> seconds.
+					If <seconds> is 0, inotifywait will never time out.
 	-e|--event <event1> [ -e|--event <event2> ... ]
 		Listen for specific event(s).  If omitted, all events are
 		listened for.
@@ -79,18 +79,18 @@ Options:
 Exit status:
 	0  -  An event you asked to watch for was received.
 	1  -  An event you did not ask to watch for was received
-	      (usually delete_self or unmount), or some error occurred.
+		  (usually delete_self or unmount), or some error occurred.
 	2  -  The --timeout option was given and no events occurred
-	      in the specified interval of time.
+		  in the specified interval of time.
 
 Events:
 	access		file or directory contents were read
 	modify		file or directory contents were written
 	attrib		file or directory attributes changed
 	close_write	file or directory closed, after being opened in
-	           	writable mode
+				writable mode
 	close_nowrite	file or directory closed, after being opened in
-	           	read-only mode
+				read-only mode
 	close		file or directory closed, regardless of read/write mode
 	open		file or directory opened
 	moved_to	file or directory moved to watched directory
@@ -114,7 +114,7 @@ while true; do
     case "$1" in
         -q) quiet=1 ;;
         -r) recursive=1 ;;
-        -w) watchtower=1 ;;
+        -w) shift; watchtower=${1} ;;
         -e) shift; events=${1^^} ;;
         -h|--help) usage; exit ;;
         --) shift; break ;;
@@ -126,7 +126,7 @@ done
 #
 ##
 watch () {
-    if [[ -z ${watchtower} ]] && watchtower=$1
+    [[ -z ${watchtower} ]] && watchtower=$1
     #echo "watch $watchtower"
     find $watchtower -printf "%s %y %p\\n" | sort -k3 - > $watchtower.inotifywait
     while true; do
