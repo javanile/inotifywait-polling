@@ -126,15 +126,16 @@ done
 #
 ##
 watch () {
-    [[ -z ${watchtower} ]] && watchtower=$1
-    #echo "watch $watchtower"
-    find $watchtower -printf "%s %y %p\\n" | sort -k3 - > $watchtower.inotifywait
+    target=$1
+    [[ -z ${watchtower} ]] && watchtower=$target
+    #echo "watch $target"
+    find $target -printf "%s %y %p\\n" | sort -k3 - > $watchtower.inotifywait
     while true; do
         sleep 2
         sign=
         last=$(cat $watchtower.inotifywait)
         #mv $watchtower.inotifywait $watchtower.$(date +%s).inotifywait
-        find $watchtower -printf "%s %y %p\\n" | sort -k3 - > $watchtower.inotifywait
+        find $target -printf "%s %y %p\\n" | sort -k3 - > $watchtower.inotifywait
         meta=$(diff <(echo "${last}") <(cat "$watchtower.inotifywait")) && true
         [[ -z "${meta}" ]] && continue
         echo -e "${meta}\n." | while IFS= read line || [[ -n "${line}" ]]; do
