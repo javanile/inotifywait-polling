@@ -125,6 +125,9 @@ done
 ##
 #
 ##
+FILE_SEPARATOR=$'\x1F'
+GROUP_SEPARARTOR=$'\x1D'
+
 watch () {
     target=$1
     [[ -z ${watchtower} ]] && watchtower="$HOME"
@@ -145,36 +148,52 @@ watch () {
             #echo "line: $line"
             if [[ "${line}" == "." ]]; then
                 #echo "sign: $sign"
-                for item in $(tr ';' '\n' <<< "${sign}"); do
-                    event=$(echo ${item} | cut -s -d':' -f1)
-                    focus=$(echo ${item} | cut -s -d':' -f2)
-                    dir=$(dirname "${focus}")/
-                    file=$(basename "${focus}")
-                    print_event ${dir} ${event} ${file}
+                IFS="${GROUP_SEPARATOR}" read -ra items <<< "${sign}"
+
+                for item in "${items[@]}"; do
+                    event="${item%%:*}"
+                    item="${item#$event:}"
+
+                    IFS="${FILE_SEPARATOR}" read -r source destination <<< "${item}"
+                    dir="$(dirname "${source}")/"
+                    source="$(basename "${source}")"
+                    destination="$(basename "${destination}")"
+
+                    if [[ "${event}" == "MOVE" ]]; then
+                        print_event "${dir}" "MOVE_FROM" "${source}"
+                        print_event "${dir}" "MOVE" "${source}" "${destination}"
+                        print_event "${dir}" "MOVE_TO" "${destination}"
+                    else
+                        print_event "${dir}" "${event}" "${source}"
+                    fi
                 done
                 break
             fi
-            flag=$(echo ${line} | cut -s -d' ' -f1)
-            file=$(echo ${line} | cut -s -d' ' -f4)
+            read -r flag size type file <<< "${line}"
             [[ -n "${file}" ]] || continue
             #echo "${file} -- ${file: -12}"
             [[ "${file: -12}" != ".inotifywait" ]] || continue
             case ${flag} in
                 "<")
-                    event=DELETE
+                    event='DELETE'
                     ;;
                 ">")
-                    event=CREATE
-                    if [[ "${sign}" == *"DELETE:${file};"* ]]; then
-                        event=MODIFY
-                        sign=$(echo "${sign}" | sed "s#DELETE:${file};##g")
-                    elif [[ "${sign}" == *"DELETE:"* ]]; then
-                        event=MOVED_TO
-                        sign=$(echo "${sign}" | sed "s#DELETE:.*;##g")
+                    event='CREATE'
+
+                    data=${sign%%${GROUP_SEPARARTOR}*}
+                    if [[ "${data}" == *"DELETE:${file}"* ]]; then
+                        event='MODIFY'
+                        sign=${sign#*${GROUP_SEPARARTOR}}
+                    elif [[ "${data}" == *"DELETE:"* ]]; then
+                        event='MOVE'
+
+                        deleted_file="${data#*:}"
+                        sign="${sign#*${GROUP_SEPARARTOR}}"
+                        file="${deleted_file}${FILE_SEPARATOR}${file}"
                     fi
                     ;;
             esac
-            sign+="${event}:${file};"
+            sign+="${event}:${file}${GROUP_SEPARARTOR}"
         done
     done
     return 0
@@ -184,7 +203,7 @@ watch () {
 #
 ##
 print_event () {
-    [[ -z "${events}" || "${events}" == *"$2"* ]] && echo "$1 $2 $3"
+    [[ -z "${events}" || "${events}" == *"$2"* ]] && echo "$1 $2 $3 $4"
     case "$2" in
         CREATE)
             [[ -z "${events}" || "${events}" == *"OPEN"* ]] && echo "$1 OPEN $3"
