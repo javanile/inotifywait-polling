@@ -126,7 +126,7 @@ done
 #
 ##
 FILE_SEPARATOR=$'\x1F'
-GROUP_SEPARARTOR=$'\x1D'
+GROUP_SEPARATOR=$'\x1D'
 
 watch () {
     target=$1
@@ -180,20 +180,20 @@ watch () {
                 ">")
                     event='CREATE'
 
-                    data=${sign%%${GROUP_SEPARARTOR}*}
+                    data=${sign%%${GROUP_SEPARATOR}*}
                     if [[ "${data}" == *"DELETE:${file}"* ]]; then
                         event='MODIFY'
-                        sign=${sign#*${GROUP_SEPARARTOR}}
+                        sign=${sign#*${GROUP_SEPARATOR}}
                     elif [[ "${data}" == *"DELETE:"* ]]; then
                         event='MOVE'
 
                         deleted_file="${data#*:}"
-                        sign="${sign#*${GROUP_SEPARARTOR}}"
+                        sign="${sign#*${GROUP_SEPARATOR}}"
                         file="${deleted_file}${FILE_SEPARATOR}${file}"
                     fi
                     ;;
             esac
-            sign+="${event}:${file}${GROUP_SEPARARTOR}"
+            sign+="${event}:${file}${GROUP_SEPARATOR}"
         done
     done
     return 0
