@@ -49,6 +49,7 @@ Options:
 	--excludei <pattern>
 				  	Like --exclude but case insensitive.
 	-w|--watchtower	Set the file path where monitoring information is stored.
+	-i|--interval	Sets the polling interval. Defaults to 2 secs. (Unit: sec)
 	-m|--monitor  	Keep listening for events forever.  Without
 				  	this option, inotifywait will exit after one
 				  	event is received.
@@ -106,7 +107,7 @@ EOF
 quiet=
 recursive=
 watchtower=
-options=$(getopt -n inotifywait -o qrhmw:e: -l help -- "$@" && true)
+options=$(getopt -n inotifywait -o qrhmw:e:i: -l help -- "$@" && true)
 eval set -- "${options}"
 #echo "options: ${options}"
 
@@ -114,6 +115,7 @@ while true; do
     case "$1" in
         -q) quiet=1 ;;
         -r) recursive=1 ;;
+        -i) shift; interval=${1} ;;
         -w) shift; watchtower=${1} ;;
         -e) shift; events=${1^^} ;;
         -h|--help) usage; exit ;;
@@ -130,6 +132,7 @@ DIFF_FORMAT=(
     "size type inode path"
 )
 WATCHTOWER_SUFFIX=".inotifywait"
+DEFAULT_INTERVAL=2
 
 init() {
     unset created_items
@@ -146,7 +149,7 @@ watch () {
 
     find $target -printf "${DIFF_FORMAT[0]}\\n" > "${watchtower}"
     while true; do
-        sleep 2
+        sleep "${interval}"
         init
 
         last=$(cat "${watchtower}")
@@ -224,6 +227,11 @@ print_event () {
 main () {
     if [[ -z "$1" ]]; then
         >&2 echo "No files specified to watch!"
+        exit 1
+    fi
+    [[ -z ${interval} ]] && interval="${DEFAULT_INTERVAL}"
+    if ! [[ ${interval} =~ ^[0-9]+$ ]] ; then
+        echo "Interval is not a number: ${interval}"
         exit 1
     fi
 
