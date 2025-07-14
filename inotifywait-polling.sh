@@ -41,36 +41,38 @@ inotifywait 3.14
 Wait for a particular event on a file or set of files.
 Usage: inotifywait [ options ] file1 [ file2 ] [ file3 ] [ ... ]
 Options:
-	-h|--help     	Show this help text.
-	@<file>       	Exclude the specified file from being watched.
+	-h|--help	 	Show this help text.
+	@<file>	   		Exclude the specified file from being watched.
 	--exclude <pattern>
-	              	Exclude all events on files matching the
-	              	extended regular expression <pattern>.
+				  	Exclude all events on files matching the
+				  	extended regular expression <pattern>.
 	--excludei <pattern>
-	              	Like --exclude but case insensitive.
+				  	Like --exclude but case insensitive.
+	-w|--watchtower	Set the file path where monitoring information is stored.
+	-i|--interval	Sets the polling interval. Defaults to 2 secs. (Unit: sec)
 	-m|--monitor  	Keep listening for events forever.  Without
-	              	this option, inotifywait will exit after one
-	              	event is received.
+				  	this option, inotifywait will exit after one
+				  	event is received.
 	-d|--daemon   	Same as --monitor, except run in the background
-	              	logging events to a file specified by --outfile.
-	              	Implies --syslog.
+				  	logging events to a file specified by --outfile.
+				  	Implies --syslog.
 	-r|--recursive	Watch directories recursively.
 	--fromfile <file>
-	              	Read files to watch from <file> or `-' for stdin.
+				  	Read files to watch from <file> or `-' for stdin.
 	-o|--outfile <file>
-	              	Print events to <file> rather than stdout.
+				  	Print events to <file> rather than stdout.
 	-s|--syslog   	Send errors to syslog rather than stderr.
-	-q|--quiet    	Print less (only print events).
-	-qq           	Print nothing (not even events).
+	-q|--quiet		Print less (only print events).
+	-qq		   		Print nothing (not even events).
 	--format <fmt>	Print using a specified printf-like format
-	              	string; read the man page for more details.
+				  	string; read the man page for more details.
 	--timefmt <fmt>	strftime-compatible format string for use with
-	              	%T in --format string.
-	-c|--csv      	Print events in CSV format.
+				  	%T in --format string.
+	-c|--csv	  	Print events in CSV format.
 	-t|--timeout <seconds>
-	              	When listening for a single event, time out after
-	              	waiting for an event for <seconds> seconds.
-	              	If <seconds> is 0, inotifywait will never time out.
+					When listening for a single event, time out after
+					waiting for an event for <seconds> seconds.
+					If <seconds> is 0, inotifywait will never time out.
 	-e|--event <event1> [ -e|--event <event2> ... ]
 		Listen for specific event(s).  If omitted, all events are
 		listened for.
@@ -78,18 +80,18 @@ Options:
 Exit status:
 	0  -  An event you asked to watch for was received.
 	1  -  An event you did not ask to watch for was received
-	      (usually delete_self or unmount), or some error occurred.
+		  (usually delete_self or unmount), or some error occurred.
 	2  -  The --timeout option was given and no events occurred
-	      in the specified interval of time.
+		  in the specified interval of time.
 
 Events:
 	access		file or directory contents were read
 	modify		file or directory contents were written
 	attrib		file or directory attributes changed
 	close_write	file or directory closed, after being opened in
-	           	writable mode
+				writable mode
 	close_nowrite	file or directory closed, after being opened in
-	           	read-only mode
+				read-only mode
 	close		file or directory closed, regardless of read/write mode
 	open		file or directory opened
 	moved_to	file or directory moved to watched directory
@@ -104,7 +106,8 @@ EOF
 
 quiet=
 recursive=
-options=$(getopt -n inotifywait -o qrhme: -l help -- "$@" && true)
+watchtower=
+options=$(getopt -n inotifywait -o qrhmw:e:i: -l help -- "$@" && true)
 eval set -- "${options}"
 #echo "options: ${options}"
 
@@ -112,6 +115,8 @@ while true; do
     case "$1" in
         -q) quiet=1 ;;
         -r) recursive=1 ;;
+        -i) shift; interval=${1} ;;
+        -w) shift; watchtower=${1} ;;
         -e) shift; events=${1^^} ;;
         -h|--help) usage; exit ;;
         --) shift; break ;;
@@ -122,51 +127,80 @@ done
 ##
 #
 ##
+DIFF_FORMAT=(
+    "%s %y %i %p"
+    "size type inode path"
+)
+WATCHTOWER_SUFFIX=".inotifywait"
+DEFAULT_INTERVAL=2
+
+init() {
+    unset created_items
+    unset deleted_items
+    declare -A created_items
+    declare -A deleted_items
+}
+
 watch () {
-    #echo "watch $1"
-    find $1 -printf "%s %y %p\\n" | sort -k3 - > $1.inotifywait
+    target=$1
+    [[ -z "${watchtower}" ]] && watchtower="${HOME}"
+    [[ "${watchtower}" != */ ]] && watchtower="${watchtower}/"
+    watchtower="${watchtower}.$(echo $target | sed -e 's|\.||g' -e 's|^./||g; s|^/||g' -e 's|/$||g' | sed -e 's|/|-|g')${WATCHTOWER_SUFFIX}"
+
+    find $target -printf "${DIFF_FORMAT[0]}\\n" > "${watchtower}"
     while true; do
-        sleep 2
-        sign=
-        last=$(cat $1.inotifywait)
-        #mv $1.inotifywait $1.$(date +%s).inotifywait
-        find $1 -printf "%s %y %p\\n" | sort -k3 - > $1.inotifywait
-        meta=$(diff <(echo "${last}") <(cat "$1.inotifywait")) && true
+        sleep "${interval}"
+        init
+
+        last=$(cat "${watchtower}")
+        find $target -printf "${DIFF_FORMAT[0]}\\n" > "${watchtower}"
+
+        meta=$(diff <(echo "${last}") <(cat "${watchtower}")) && true
         [[ -z "${meta}" ]] && continue
         echo -e "${meta}\n." | while IFS= read line || [[ -n "${line}" ]]; do
-            #echo "line: $line"
             if [[ "${line}" == "." ]]; then
-                #echo "sign: $sign"
-                for item in $(tr ';' '\n' <<< "${sign}"); do
-                    event=$(echo ${item} | cut -s -d':' -f1)
-                    focus=$(echo ${item} | cut -s -d':' -f2)
-                    dir=$(dirname "${focus}")/
-                    file=$(basename "${focus}")
-                    print_event ${dir} ${event} ${file}
+                for _inode in "${!deleted_items[@]}"; do
+                    deleted_item="${deleted_items[$_inode]}"
+                    created_item="${created_items[$_inode]}"
+
+                    dir="$(dirname "${deleted_item}")/"
+                    source="$(basename "${deleted_item}")"
+                    destination="$(basename "${created_item}")"
+
+                    if [[ ! -n "${destination}" ]]; then
+                        print_event "${dir}" "DELETE" "${source}"
+                    elif [[ "${deleted_item}" == "${created_item}" ]]; then
+                        unset created_items[$_inode]
+                        print_event "${dir}" "MODIFY" "${source}"
+                    else
+                        unset created_items[$_inode]
+                        print_event "${dir}" "MOVE_FROM" "${source}"
+                        print_event "${dir}" "MOVE" "${source}" "${destination}"
+                        print_event "${dir}" "MOVE_TO" "${destination}"
+                    fi
+                done
+                for _inode in "${!created_items[@]}"; do
+                    created_item="${created_items[$_inode]}"
+
+                    dir="$(dirname "${created_item}")/"
+                    file="$(basename "${created_item}")"
+
+                    print_event "${dir}" "CREATE" "${file}"
                 done
                 break
             fi
-            flag=$(echo ${line} | cut -s -d' ' -f1)
-            file=$(echo ${line} | cut -s -d' ' -f4)
-            [[ -n "${file}" ]] || continue
-            #echo "${file} -- ${file: -12}"
-            [[ "${file: -12}" != ".inotifywait" ]] || continue
+
+            read -r flag ${DIFF_FORMAT[1]} <<< "${line}"
+            [[ -n "${path}" ]] || continue
+            [[ "${path: -${#WATCHTOWER_SUFFIX}}" == "${WATCHTOWER_SUFFIX}" ]] && continue
             case ${flag} in
                 "<")
-                    event=DELETE
+                    deleted_items[$inode]="${path}"
                     ;;
                 ">")
-                    event=CREATE
-                    if [[ "${sign}" == *"DELETE:${file};"* ]]; then
-                        event=MODIFY
-                        sign=$(echo "${sign}" | sed "s#DELETE:${file};##g")
-                    elif [[ "${sign}" == *"DELETE:"* ]]; then
-                        event=MOVED_TO
-                        sign=$(echo "${sign}" | sed "s#DELETE:.*;##g")
-                    fi
+                    created_items[$inode]="${path}"
                     ;;
             esac
-            sign+="${event}:${file};"
         done
     done
     return 0
@@ -176,7 +210,7 @@ watch () {
 #
 ##
 print_event () {
-    [[ -z "${events}" || "${events}" == *"$2"* ]] && echo "$1 $2 $3"
+    [[ -z "${events}" || "${events}" == *"$2"* ]] && echo "$1 $2 $3 $4"
     case "$2" in
         CREATE)
             [[ -z "${events}" || "${events}" == *"OPEN"* ]] && echo "$1 OPEN $3"
@@ -193,6 +227,11 @@ print_event () {
 main () {
     if [[ -z "$1" ]]; then
         >&2 echo "No files specified to watch!"
+        exit 1
+    fi
+    [[ -z ${interval} ]] && interval="${DEFAULT_INTERVAL}"
+    if ! [[ ${interval} =~ ^[0-9]+$ ]] ; then
+        echo "Interval is not a number: ${interval}"
         exit 1
     fi
 
