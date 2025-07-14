@@ -125,75 +125,79 @@ done
 ##
 #
 ##
-FILE_SEPARATOR=$'\x1F'
-GROUP_SEPARATOR=$'\x1D'
+DIFF_FORMAT=(
+    "%s %y %i %p"
+    "size type inode path"
+)
+WATCHTOWER_SUFFIX=".inotifywait"
+
+init() {
+    unset created_items
+    unset deleted_items
+    declare -A created_items
+    declare -A deleted_items
+}
 
 watch () {
     target=$1
-    [[ -z ${watchtower} ]] && watchtower="$HOME"
-    [[ $watchtower != */ ]] && watchtower="$watchtower/"
-    watchtower=$watchtower.$(echo $target | sed -e 's|\.||g' -e 's|^./||g; s|^/||g' -e 's|/$||g' | sed -e 's|/|-|g').inotifywait
+    [[ -z "${watchtower}" ]] && watchtower="${HOME}"
+    [[ "${watchtower}" != */ ]] && watchtower="${watchtower}/"
+    watchtower="${watchtower}.$(echo $target | sed -e 's|\.||g' -e 's|^./||g; s|^/||g' -e 's|/$||g' | sed -e 's|/|-|g')${WATCHTOWER_SUFFIX}"
 
-    #echo "watch $target"
-    find $target -printf "%s %y %p\\n" | sort -k3 - > $watchtower
+    find $target -printf "${DIFF_FORMAT[0]}\\n" > "${watchtower}"
     while true; do
         sleep 2
-        sign=
-        last=$(cat $watchtower)
-        #mv $watchtower $watchtower.$(date +%s)
-        find $target -printf "%s %y %p\\n" | sort -k3 - > $watchtower
-        meta=$(diff <(echo "${last}") <(cat "$watchtower")) && true
+        init
+
+        last=$(cat "${watchtower}")
+        find $target -printf "${DIFF_FORMAT[0]}\\n" > "${watchtower}"
+
+        meta=$(diff <(echo "${last}") <(cat "${watchtower}")) && true
         [[ -z "${meta}" ]] && continue
         echo -e "${meta}\n." | while IFS= read line || [[ -n "${line}" ]]; do
-            #echo "line: $line"
             if [[ "${line}" == "." ]]; then
-                #echo "sign: $sign"
-                IFS="${GROUP_SEPARATOR}" read -ra items <<< "${sign}"
+                for _inode in "${!deleted_items[@]}"; do
+                    deleted_item="${deleted_items[$_inode]}"
+                    created_item="${created_items[$_inode]}"
 
-                for item in "${items[@]}"; do
-                    event="${item%%:*}"
-                    item="${item#$event:}"
+                    dir="$(dirname "${deleted_item}")/"
+                    source="$(basename "${deleted_item}")"
+                    destination="$(basename "${created_item}")"
 
-                    IFS="${FILE_SEPARATOR}" read -r source destination <<< "${item}"
-                    dir="$(dirname "${source}")/"
-                    source="$(basename "${source}")"
-                    destination="$(basename "${destination}")"
-
-                    if [[ "${event}" == "MOVE" ]]; then
+                    if [[ ! -n "${destination}" ]]; then
+                        print_event "${dir}" "DELETE" "${source}"
+                    elif [[ "${deleted_item}" == "${created_item}" ]]; then
+                        unset created_items[$_inode]
+                        print_event "${dir}" "MODIFY" "${source}"
+                    else
+                        unset created_items[$_inode]
                         print_event "${dir}" "MOVE_FROM" "${source}"
                         print_event "${dir}" "MOVE" "${source}" "${destination}"
                         print_event "${dir}" "MOVE_TO" "${destination}"
-                    else
-                        print_event "${dir}" "${event}" "${source}"
                     fi
+                done
+                for _inode in "${!created_items[@]}"; do
+                    created_item="${created_items[$_inode]}"
+
+                    dir="$(dirname "${created_item}")/"
+                    file="$(basename "${created_item}")"
+
+                    print_event "${dir}" "CREATE" "${file}"
                 done
                 break
             fi
-            read -r flag size type file <<< "${line}"
-            [[ -n "${file}" ]] || continue
-            #echo "${file} -- ${file: -12}"
-            [[ "${file: -12}" != ".inotifywait" ]] || continue
+
+            read -r flag ${DIFF_FORMAT[1]} <<< "${line}"
+            [[ -n "${path}" ]] || continue
+            [[ "${path: -${#WATCHTOWER_SUFFIX}}" == "${WATCHTOWER_SUFFIX}" ]] && continue
             case ${flag} in
                 "<")
-                    event='DELETE'
+                    deleted_items[$inode]="${path}"
                     ;;
                 ">")
-                    event='CREATE'
-
-                    data=${sign%%${GROUP_SEPARATOR}*}
-                    if [[ "${data}" == *"DELETE:${file}"* ]]; then
-                        event='MODIFY'
-                        sign=${sign#*${GROUP_SEPARATOR}}
-                    elif [[ "${data}" == *"DELETE:"* ]]; then
-                        event='MOVE'
-
-                        deleted_file="${data#*:}"
-                        sign="${sign#*${GROUP_SEPARATOR}}"
-                        file="${deleted_file}${FILE_SEPARATOR}${file}"
-                    fi
+                    created_items[$inode]="${path}"
                     ;;
             esac
-            sign+="${event}:${file}${GROUP_SEPARATOR}"
         done
     done
     return 0
